@@ -84,7 +84,7 @@ ModbusMessage FC03(ModbusMessage request) {
 	response.add(request.getServerID(), request.getFunctionCode(), (uint8_t)(words*2));	//Set up message with serverID, FC and length of data (1 register is 2 byte)
 	
 	// on request for 0x2001 register  "0B 03 07 D1 00 01 D5 ED"  answer 0x3F80 means that Power Meter is active 
-	if ((address == 0x0835)&& (words==0x01))  response.add(uint16_t(0x3F80)); 
+	if ((address == 0x07D1)&& (words==0x01))  response.add(uint16_t(0x3F80)); 
 	else if ((address==HUAWEI_START_REG_1)&& (words>0x0A)) {       // read data part 1 request 0B 03 08 36 00 50 A7 32
 		for (uint16_t i = 0; i < words; i++) {
 			response.add(*(HuReg+HuaweiTranslate[i]));
