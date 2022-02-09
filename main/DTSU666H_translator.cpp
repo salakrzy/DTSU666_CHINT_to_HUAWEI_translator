@@ -52,36 +52,6 @@ char IsPowerMeterActive2= char(0x80);
 uint32_t request_time;
 uint16_t Chint_RegData[CHINT_REQUEST1+CHINT_REQUEST2+10];  // for read from CHINT  to do zmiany
 
-/*
-
-int HuaweiTranslate[CHINT_REQUEST1+CHINT_REQUEST2+50]={
- 0, 1, 2, 3, 4, 5, 6, 7, 
- 8, 9,10,11,12,13,14,15,
-16,17,18,19,20,21,22,23,
-24,25,26,27,28,29,30,31,
-32,33,34,35,36,37,38,39,
-40,41,42,43,44,45,46,47,
-48,49,50,51,52,53,54,55,
-56,57,58,59,60,61,62,63,
-64,65,66,67,68,69,
-70,71,72,73,74,75,76,77,78,79,
-80,81,82,83,84
-};
-int HuaweiTranslate[CHINT_REQUEST1+CHINT_REQUEST2+50]={
- 12, 13, 14, 15, 16, 17, 6, 7,  2111
- 8, 9,10,11,x16,x17,0,1,2,3     2121
-4,5,x24,x25,18,19,20,21,22,23,   2131
-24,25,26,27,28,29,30,31,32,33,   2141
-34,35,36,37,38,39,40,41,42,43,   2151
-44,45,46,47,48,49,50,51,52,53,   2161
-54,55,56,57,86,87,60,61,62,63,    2171
-64,65,88,89,68,69,70,71,72,73,    2181
-74,75,
-72,73,74,75,76,77,78,79,
-80,81,82,83
-};
-*/
-
 int HuaweiTranslate[CHINT_REQUEST1+CHINT_REQUEST2+50]=
 {12,13,14,15,16,17,6,7,
 8,9,10,11,80,81,0,1,2,3,
@@ -120,8 +90,8 @@ ModbusMessage FC03(ModbusMessage request) {
 			response.add(*(HuReg+HuaweiTranslate[i]));
 		}}
 	else if ((address == HUAWEI_START_REG_2)&& (words==0x0A)) {   //  read data part 2 request 0B 03 08 A6 00 0A 27 24 
-		for (uint16_t i = 80; i < (i+ words); i++) {
-			response.add(0x0000);  // answer for 10 unknown registers is set to zero
+		for (uint16_t i = 0; i <  words; i++) {
+			response.add(0x00);  // here is possible put answer for 10 unknown registers, now answer is set to zero
 		}}
 	else {  // No, either address or words are outside the limits. Set up error response.
     response.setError(request.getServerID(), request.getFunctionCode(), ILLEGAL_DATA_ADDRESS);
