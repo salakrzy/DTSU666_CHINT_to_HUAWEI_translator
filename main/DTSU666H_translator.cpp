@@ -144,9 +144,9 @@ void handleData1(ModbusMessage response, uint32_t token) {
 		offs = response.get(offs, Chint_RegData[i]);
 		Chint_RegData[i]=Chint_RegData[i]/Divider[i];
 	}}
-	else if (words==2*CHINT_REQUEST2) {
+	else if (words==2*CHINT_REQUEST2) {    // is this answer for part2?
 		 for (uint8_t i = 0; i < words/2; i++) {
-		offs = response.get(offs, Chint_RegData[i+CHINT_REQUEST1/2]);  // is this answer for part1?
+		offs = response.get(offs, Chint_RegData[i+CHINT_REQUEST1/2]);  
 		Chint_RegData[i+CHINT_REQUEST1/2]=Chint_RegData[i+CHINT_REQUEST1/2]/Divider[i+CHINT_REQUEST1/2];
 	}}
 	else{
