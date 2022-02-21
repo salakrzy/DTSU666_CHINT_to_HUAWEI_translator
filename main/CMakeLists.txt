@@ -8,6 +8,7 @@ set(SRC_NEW
   ModbusServer.cpp
   ModbusServerRTU.cpp
   RTUutils.cpp 
+  PubSubClient.cpp
   )
 
 set(srcs ${SRC_NEW} )
