@@ -28,12 +28,15 @@ I divided request to CHINT into two part because for one request the number of  
 #include "Logging.h"
 #include "ModbusClientRTU.h"	// header for the Modbus Client RTU style from eModbus Library
 #include "ModbusServerRTU.h"
-#define RX1_PIN GPIO_NUM_18
-#define TX1_PIN GPIO_NUM_19
-#define REDE1_PIN GPIO_NUM_23
-#define RX2_PIN GPIO_NUM_16
-#define TX2_PIN GPIO_NUM_17
-#define REDE2_PIN GPIO_NUM_15
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+#define RX1_PIN GPIO_NUM_17  	// CHINT
+#define TX1_PIN GPIO_NUM_4  	// CHINT
+#define REDE1_PIN GPIO_NUM_16	// CHINT
+#define RX2_PIN GPIO_NUM_23		//Huawei
+#define TX2_PIN GPIO_NUM_19		//Huawei
+#define REDE2_PIN GPIO_NUM_21	//Huawei
 #define HUAWEI_ID 0x0B // must be this same address as in setup Huawey inverter
 #define CHINT_ID 0x01	// must be this same address as in setup CHINT Power Meter
 #define BAUDRATE 9600
@@ -43,10 +46,22 @@ I divided request to CHINT into two part because for one request the number of  
 #define CHINT_START_REG_2 0x401E	// High registers
 #define CHINT_REQUEST1 82			// number Low registers
 #define CHINT_REQUEST2 60			// number High registers
-#define READ_INTERVAL 2000  // setup how often read the CHINT Power Meter
+#define READ_TIMER 2000  // set up how often read the CHINT Power Meter
+#define MQTT_TIMER 10000  
+
+const char* ssid = "wifi username";
+const char* password = "wifi password";
+const char* mqttServer = "mqtt server";
+const int mqttPort = mqtt port;
+const char* mqttUser = "mqtt username";
+const char* mqttPassword = "mqtt password";
+
 bool data_ready = false;
+bool mqtt_on = false;
+uint32_t mqtt_interval = millis();
+int LED_BUILTIN = 2;   // LED on DevKit
 int errors = 1;  // count number errors 
-uint32_t request_time;
+uint32_t request_time = millis();
 float Chint_RegData[CHINT_REQUEST1/2+CHINT_REQUEST2/2];  // store Chint registers
 
 int HuaweiTranslate[CHINT_REQUEST1/2+CHINT_REQUEST2/2]=
@@ -92,7 +107,8 @@ int Divider[CHINT_REQUEST1/2+CHINT_REQUEST2/2]=
 1000,				// 36  Total active electricity
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 }; 
-
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 // The RS485 module has no halfduplex,so the second parameter with the DE/RE pin is required! https://emodbus.github.io/modbusserver-rtu-api
 //	Create a ModbusRTU Server Slave instance listening on Serial2 with 20000ms timeout RE/DE control pin GPIO_NUM_15  
@@ -163,19 +179,93 @@ void handleError(Error error, uint32_t token) {
   ModbusError me(error);
   Serial.printf("\nError me number  %u  token %u \n", errors++, token);
   LOG_E("Error response: %02X - %s\n", (int)me, (const char *)me);
+  digitalWrite(LED_BUILTIN, LOW);
+}
+void setMqttConnection(){
+	uint32_t wifi_test=millis();
+	WiFi.begin(ssid, password);
+	while ((WiFi.status() != WL_CONNECTED) and mqtt_on) {
+		if (millis() - wifi_test> 10*MQTT_TIMER){
+			mqtt_on=false;
+			Serial.println("Timeout, cannot connect to WiFi");
+		} else { 
+			delay(500);
+			Serial.println("Connecting to WiFi..");
+	}}
+	if (WiFi.status() == WL_CONNECTED) Serial.println("Connected to the WiFi network");
+	mqtt_on=true;
+	client.setServer(mqttServer, mqttPort);
+	uint32_t mqtt_test=millis();
+	while (!client.connected()and mqtt_on) {
+		Serial.println("Connecting to MQTT...");
+		if (client.connect("ESP32Client", mqttUser, mqttPassword )) {
+			Serial.println("connected");
+			} else {
+				if(millis()-mqtt_test> 10*MQTT_TIMER){
+					mqtt_on=false;
+					Serial.println("Cannot connect to MQTT Server");
+				} else {
+					Serial.print("failed with state ");
+					Serial.print(client.state());
+					delay(2000);
+	}}}
+	if (client.connected()) {
+		Serial.println("Connected to the MQTT server");
+		digitalWrite(LED_BUILTIN, HIGH);  // blue LED on if MQTT server connection is OK
+}
+}
+void sendMessage(String TopicName, String keyName, float keyValue) {
+    String reg_data = "";
+    reg_data += keyValue;
+    String publishstring = "DTSU666/";
+    publishstring += TopicName;
+	publishstring += "/";
+	publishstring += keyName;
+    client.publish(publishstring.c_str(), reg_data.c_str());
+}
+
+void handleMqttPublish (){
+	if (client.connected()){
+		sendMessage("Voltage", "ua_V", Chint_RegData[3]);
+		sendMessage("Voltage", "ub_V", Chint_RegData[4]);
+		sendMessage("Voltage", "uc_V", Chint_RegData[5]);
+		sendMessage("Current", "ia_A", Chint_RegData[6]);
+		sendMessage("Current", "ib_A", Chint_RegData[7]);
+		sendMessage("Current", "ic_A", Chint_RegData[8]);
+		sendMessage("Power", "pt_kW", Chint_RegData[9]);
+		sendMessage("Power", "pa_kW", Chint_RegData[10]);
+		sendMessage("Power", "pb_kW", Chint_RegData[11]);
+		sendMessage("Power", "pc_kW", Chint_RegData[12]);
+		sendMessage("Power", "qt_kVar", Chint_RegData[13]);
+		sendMessage("Power", "qa_kVar", Chint_RegData[14]);
+		sendMessage("Power", "qb_kVar", Chint_RegData[15]);
+		sendMessage("Power", "qc_kVar", Chint_RegData[16]);
+		sendMessage("PowerFactor", "", Chint_RegData[21]);
+		sendMessage("Frequency", "", Chint_RegData[34]);
+		sendMessage("EnergyDemand", "", Chint_RegData[40]);
+		sendMessage("Energy", "Import", Chint_RegData[41]);
+		sendMessage("Energy", "Export", Chint_RegData[46]);
+//		sendMessage("", "", Chint_RegData[]);
+	} else{
+		digitalWrite(LED_BUILTIN, LOW);	
+		setMqttConnection();	
+	}
 }
 
 // Setup() - initialization happens here
 void setup() {
+	pinMode (LED_BUILTIN, OUTPUT);
+	digitalWrite(LED_BUILTIN, LOW);
 	Serial1.setRxBufferSize(512);  // default the buffer size is 256
-	Serial.begin(115200);  // Init Serial port monitor for development
+	Serial.begin(115200);  // Init Serial port monitor for development and monitoring
 	while (!Serial) {}
 	Serial.print("Serial0 OK __  ");
+
+	setMqttConnection();	
 	
 	Serial1.begin(9600, SERIAL_8N2, RX1_PIN, TX1_PIN); //Serial1 connected to Modbus RTU CHINT  
 	while (!Serial1) {}
 	Serial.print("Serial1 OK __  ");
-
     MbChint.onDataHandler(&handleData1); 	// Set up ModbusRTU client - provide onData handler function	
     MbChint.onErrorHandler(&handleError);	// - provide onError handler function
     MbChint.setTimeout(2000);			// Set message timeout to 2000ms
@@ -186,12 +276,13 @@ void setup() {
 	Serial.println("Serial2 OK __");
 	MBserver.registerWorker(HUAWEI_ID, READ_HOLD_REGISTER, &FC03 ); // Register served function code worker for server 11, FC 0x03
 	MBserver.start(1); // Start ModbusRTU background task on CPU 1
+
 }
 
 // loop() - cyclically request the data from CHINT
 void loop() {
   static uint32_t next_request = millis();
-  if (millis() - next_request > READ_INTERVAL) {
+  if (millis() - next_request > READ_TIMER) {
     data_ready = false;
     Error err = MbChint.addRequest(millis(),CHINT_ID, READ_HOLD_REGISTER, CHINT_START_REG_1, CHINT_REQUEST1);
     if (err==SUCCESS) {
@@ -205,10 +296,12 @@ void loop() {
     next_request = millis();    // Save current time to check for next cycle
 	} else {
 		if (data_ready) {
-		data_ready = false;		
-		Serial.printf("Loop end time %ld  (ms)\n", millis());
-		// if you want to print on monitor port the data received from CHINT
-		for (uint8_t j = 0; j < (CHINT_REQUEST1+CHINT_REQUEST2)/2; ++j)Serial.printf("j=%i      LoadresCHINT=%i;      wart=%8.4f: \n", j,(2*j+ CHINT_START_REG_1), Chint_RegData[j]);
-		}
-	}
-}
+			digitalWrite(LED_BUILTIN, HIGH);	
+			data_ready = false;		
+			Serial.printf("Loop end time %ld  (ms)\n", millis());
+			// if you want to print on monitor port the data received from CHINT
+			for (uint8_t j = 0; j < (CHINT_REQUEST1+CHINT_REQUEST2)/2; ++j)Serial.printf("j=%i      LoadresCHINT=%i;      wart=%8.4f: \n", j,(2*j+ CHINT_START_REG_1), Chint_RegData[j]);
+			if (millis()-mqtt_interval> MQTT_TIMER){
+				handleMqttPublish ();
+				mqtt_interval = millis();
+}}}}
