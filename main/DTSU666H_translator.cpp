@@ -65,13 +65,6 @@ const char* mqttUser = "mqtt username";
 const char* mqttPassword = "mqtt password";
 */
 
-const char* ssid = "GABINET";
-const char* password = "patroko216b";
-const char* mqttServer = "192.168.1.40";
-const int mqttPort = 1883;
-const char* mqttUser = "iecp1";
-const char* mqttPassword = "iecp2";
-
 
 bool data_ready = false;
 bool mqtt_on = true;
