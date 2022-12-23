@@ -11,8 +11,8 @@ when you activate power meter in smartfon aplication the SUN2000 start sending r
 00 01 - how many registers read (1 register mean 2 bytes)
 D5 ED - CRC checksum
 
-If register address 0x07D1 = 0x3F80 the sun2000 recognize it as  PowerMeter is active
-slave answer should look like this  "0B 03 02 3F 80 30 15" 
+If data in register address 0x07D1 = 0x3B11  (or 0x3F80 in some old versions) the sun2000 recognize it as  PowerMeter is active
+slave answer should look like this  "0B 03 3B 11 80 30 15"  in old versions "0B 03 02 3F 80 30 15" 
 after this SUN200 send request  "0B 03 08 36 00 50 A7 32"
 and we should send value 80  registers begnining from address 0x0836  (dec 2002)
 from time to time SUN2000 send request 0B 03 08 A6 00 0A 27 24 but i do not know what exactly is stored in this 10 registers begining from 0x08A6. I asked support Huawai but they have not answered.
@@ -44,25 +44,43 @@ I divided request to CHINT into two part because for one request the number of  
 #define HUAWEI_START_REG_2 0x08A6 //SUN2000 ask for 10 registers but i don't know for what. Huawei did nor answer my question.
 #define CHINT_START_REG_1 0x2000  // Low registers
 #define CHINT_START_REG_2 0x401E	// High registers
-#define CHINT_REQUEST1 82			// number Low registers
-#define CHINT_REQUEST2 60			// number High registers
-#define READ_TIMER 2000  // set up how often read the CHINT Power Meter
+#define CHINT_REQUEST1 82			// 41  Low registers
+#define CHINT_REQUEST2 60			// 30  High registers
+#define READ_TIMER 300 // set up how often read the CHINT Power Meter
 #define MQTT_TIMER 10000  
 
+uint16_t CHINT_request_map [3] [6] = {{0x2000, 0x201E, 0x203A, 0x401E, 0x4034,0x4048}, {15,14,12,11,10,9},{0,15,29,41,52,62}};
+/*
+0x2000, 0x201E, 0x203A, 0x401E, 0x4034,0x4048	CHINT address request
+15,		14,		12,		11,		10,		9		number requested registers
+0,		15,		29,		41,		52,		62 		start address in HuaweiTranslate Array
+*/
+
+/*
 const char* ssid = "wifi username";
 const char* password = "wifi password";
 const char* mqttServer = "mqtt server";
 const int mqttPort = mqtt port;
 const char* mqttUser = "mqtt username";
 const char* mqttPassword = "mqtt password";
+*/
+
+const char* ssid = "GABINET";
+const char* password = "patroko216b";
+const char* mqttServer = "192.168.1.40";
+const int mqttPort = 1883;
+const char* mqttUser = "iecp1";
+const char* mqttPassword = "iecp2";
+
 
 bool data_ready = false;
-bool mqtt_on = false;
+bool mqtt_on = true;
 uint32_t mqtt_interval = millis();
 int LED_BUILTIN = 2;   // LED on DevKit
 int errors = 1;  // count number errors 
-uint32_t request_time = millis();
-float Chint_RegData[CHINT_REQUEST1/2+CHINT_REQUEST2/2];  // store Chint registers
+int numb_chint_request = 0;
+uint32_t chint_request_time = millis();
+float Chint_RegData[CHINT_REQUEST1/2+CHINT_REQUEST2/2];  // to store Chint registers
 
 int HuaweiTranslate[CHINT_REQUEST1/2+CHINT_REQUEST2/2]=
 {6, 7, 8,   	// Phase A,B,C current   0 1 2
@@ -83,8 +101,8 @@ int HuaweiTranslate[CHINT_REQUEST1/2+CHINT_REQUEST2/2]=
 33,34,35,		// 33 34 35
 41,				// Total negative Active electricity  36
 37,38,39, 		// 37 38 39  
-40,	41,			// 40 41 END Lower Chints registers
-42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
+40,				// 40  END Lower Chints registers
+41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
 }; 
 
 int Divider[CHINT_REQUEST1/2+CHINT_REQUEST2/2]=
@@ -127,14 +145,13 @@ ModbusMessage FC03(ModbusMessage request) {
 	request.get(4, words);
 	response.add(request.getServerID(), request.getFunctionCode(), (uint8_t)(words*2));	//Set up message with serverID, FC and length of data (1 register is 2 bytes)
 	
-	// on request for 0x2001 register  "0B 03 07 D1 00 01 D5 ED"  answer 0x3F80 means that Power Meter is active 
-	if ((address == 0x07D1)&& (words==0x01))  response.add(uint16_t(0x3F80)); 
+	// on request for 0x2001 register  "0B 03 07 D1 00 01 D5 ED"  we have to answer 0x3B11  (or 0x3F80 in some old versions) what means that Power Meter is active 
+	if ((address == 0x07D1)&& (words==0x01))  response.add(uint16_t(0x3B11)); 
 	else if ((address==HUAWEI_START_REG_1)&& (words=0x50)) {       // read data part 1 request "0B 03 08 36 00 50 A7 32"
 		for (uint16_t i = 0; i < words/2; i++) {
 			response.add(*(HuReg+HuaweiTranslate[i]));   // translate CHint on to Huawei addresses
 		}
-		for (int j = 0; j < words/2; j++)Serial.printf("HUAWEI j=%i            wart=%8.4f: \n", j, *(HuReg+HuaweiTranslate[j]));
-		
+		for (int j = 0; j < words/2; j++)Serial.printf("  rej=%i       HUAWEIaddress=%i     wart=;%8.4f\n", j,2*j+HUAWEI_START_REG_1, *(HuReg+HuaweiTranslate[j]));
 		}
 	else if ((address == HUAWEI_START_REG_2)&& (words==0x0A)) {   //  read data part 2 request "0B 03 08 A6 00 0A 27 24" 
 		for (uint16_t i = 0; i <  words/2; i++) {
@@ -152,24 +169,56 @@ ModbusMessage FC03(ModbusMessage request) {
 // The device has values all as IEEE754 float32 in two consecutive registers
 // Read the CHint response in a loop
 void handleData1(ModbusMessage response, uint32_t token) {
-  uint8_t words;      			// response CHINT number of registers
-  response.get(2, words);
-  uint16_t offs = 3;   // First data are on pos 3, after server ID, function code and length byte
-	if (words==2*CHINT_REQUEST1) {  // is this answer for part1?
-	  for (uint8_t i = 0; i < words/2; i++) {
-		offs = response.get(offs, Chint_RegData[i]);
-		Chint_RegData[i]=Chint_RegData[i]/Divider[i];
-	}}
-	else if (words==2*CHINT_REQUEST2) {    // is this answer for part2?
-		 for (uint8_t i = 0; i < words/2; i++) {
-		offs = response.get(offs, Chint_RegData[i+CHINT_REQUEST1/2]);  
-		Chint_RegData[i+CHINT_REQUEST1/2]=Chint_RegData[i+CHINT_REQUEST1/2]/Divider[i+CHINT_REQUEST1/2];
-	}}
-	else{
-	Serial.printf("error read from CHINT");
+	uint8_t words;      			// response CHINT number of registers
+	response.get(2, words);
+	uint16_t offs = 3;   // First data are on pos 3, after server ID, function code and length byte
+	int numb_bytes=words;
+	int  Chint_RegData_ofset=0;
+	switch (numb_bytes) {
+	case 60:
+		Chint_RegData_ofset= CHINT_request_map[2][0];
+//		Serial.println("CZYTAM 15 rejestrów");
+		break;
+	case 56:
+		Chint_RegData_ofset= CHINT_request_map[2][1];
+//		Serial.println(" CZYTAM 14 rejestrów");
+		break;
+	case 48:
+		Chint_RegData_ofset= CHINT_request_map[2][2];
+//		Serial.println("   CZYTAM 12 rejestrów");
+		break;
+	case 44:
+		Chint_RegData_ofset= CHINT_request_map[2][3];
+//		Serial.println("     CZYTAM 11 rejestrów");
+		break;
+	case 40:
+		Chint_RegData_ofset= CHINT_request_map[2][4];
+//		Serial.println("      CZYTAM 10 rejestrów");
+		break;
+	case 36:
+		Chint_RegData_ofset= CHINT_request_map[2][5];
+//		Serial.println("      CZYTAM 9 rejestrów");
+		break;
+	default:
+		Serial.printf("error read from CHINT  words= int %i  HEX %x: ",numb_bytes, words);
+		words=0;
+		data_ready = false;
+		while(Serial.available()){
+		Serial.read();
+		}
+		break;
+	  }
+//	Serial.printf(" words= int %i  HEX %x: \n",numb_bytes, words);
+	for (uint8_t i = 0; i < words/2; i++) {
+	offs = response.get(offs, Chint_RegData[Chint_RegData_ofset]);
+//	Serial.print(Chint_RegData[Chint_RegData_ofset], HEX);
+//	Serial.printf(" %i ", i);
+	Chint_RegData[Chint_RegData_ofset]=Chint_RegData[Chint_RegData_ofset]/Divider[Chint_RegData_ofset];
+	Chint_RegData_ofset++;
 	}
-  request_time = token;
-  data_ready = true;
+	if (words>0) data_ready = true;
+	chint_request_time = token;
+
 }
 
 // Define an onError handler function to receive error responses
@@ -192,8 +241,7 @@ void setMqttConnection(){
 			delay(500);
 			Serial.println("Connecting to WiFi..");
 	}}
-	if (WiFi.status() == WL_CONNECTED) Serial.println("Connected to the WiFi network");
-	mqtt_on=true;
+	if ((WiFi.status() == WL_CONNECTED)and mqtt_on) Serial.println("Connected to the WiFi network");
 	client.setServer(mqttServer, mqttPort);
 	uint32_t mqtt_test=millis();
 	while (!client.connected()and mqtt_on) {
@@ -258,13 +306,11 @@ void setup() {
 	digitalWrite(LED_BUILTIN, LOW);
 	Serial1.setRxBufferSize(512);  // default the buffer size is 256
 	Serial.begin(115200);  // Init Serial port monitor for development and monitoring
-	while (!Serial) {}
+	while (!Serial) { }
 	Serial.print("Serial0 OK __  ");
-
-	setMqttConnection();	
-	
+	if (mqtt_on) setMqttConnection();	
 	Serial1.begin(9600, SERIAL_8N2, RX1_PIN, TX1_PIN); //Serial1 connected to Modbus RTU CHINT  
-	while (!Serial1) {}
+	while (!Serial1) {Serial.println("CHINT port is not ready");}
 	Serial.print("Serial1 OK __  ");
     MbChint.onDataHandler(&handleData1); 	// Set up ModbusRTU client - provide onData handler function	
     MbChint.onErrorHandler(&handleError);	// - provide onError handler function
@@ -272,7 +318,7 @@ void setup() {
     MbChint.begin(0);				// Start ModbusRTU background task on CPU 0
 
 	Serial2.begin(9600, SERIAL_8N2, RX2_PIN, TX2_PIN);  //Serial2 connected to Modbus RTU SUN2000
-	while (!Serial2) {}
+	while (!Serial2) {Serial.println("Inverter port is not ready");}
 	Serial.println("Serial2 OK __");
 	MBserver.registerWorker(HUAWEI_ID, READ_HOLD_REGISTER, &FC03 ); // Register served function code worker for server 11, FC 0x03
 	MBserver.start(1); // Start ModbusRTU background task on CPU 1
@@ -282,26 +328,27 @@ void setup() {
 // loop() - cyclically request the data from CHINT
 void loop() {
   static uint32_t next_request = millis();
-  if (millis() - next_request > READ_TIMER) {
+  if (millis() - next_request > READ_TIMER ) {
     data_ready = false;
-    Error err = MbChint.addRequest(millis(),CHINT_ID, READ_HOLD_REGISTER, CHINT_START_REG_1, CHINT_REQUEST1);
-    if (err==SUCCESS) {
-		delay(10);    				// delay to get different token ID for request for part2
-		err = MbChint.addRequest(millis(),CHINT_ID, READ_HOLD_REGISTER, CHINT_START_REG_2, CHINT_REQUEST2);
-	}
+	if (numb_chint_request >5) numb_chint_request=0;
+    Error err = MbChint.addRequest(millis(),CHINT_ID, READ_HOLD_REGISTER, CHINT_request_map[0][numb_chint_request], 2*CHINT_request_map[1][numb_chint_request]);
     if (err!=SUCCESS) {
 		ModbusError e(err);
-		LOG_E("Error creating request: %02X - %s\n", (int)e, (const char *)e);
-    }
+		LOG_E("loop() Error creating request: %02X - %s\n", (int)e, (const char *)e);
+    }	
     next_request = millis();    // Save current time to check for next cycle
-	} else {
+	numb_chint_request++;	
+	}
+	else {
 		if (data_ready) {
 			digitalWrite(LED_BUILTIN, HIGH);	
 			data_ready = false;		
 			Serial.printf("Loop end time %ld  (ms)\n", millis());
 			// if you want to print on monitor port the data received from CHINT
-			for (uint8_t j = 0; j < (CHINT_REQUEST1+CHINT_REQUEST2)/2; ++j)Serial.printf("j=%i      LoadresCHINT=%i;      wart=%8.4f: \n", j,(2*j+ CHINT_START_REG_1), Chint_RegData[j]);
-			if (millis()-mqtt_interval> MQTT_TIMER){
+			for (uint8_t j = 0; j < (CHINT_REQUEST1)/2; ++j)Serial.printf("rej=%i      LoadresCHINT=%i;      wart=;%8.4f\n", j,(2*j+ CHINT_START_REG_1), Chint_RegData[j]);
+			for (uint8_t i = 0; i < (CHINT_REQUEST2)/2; ++i)Serial.printf("rej=%i      HiadresCHINT=%i;      wart=;%8.4f\n", i+(CHINT_REQUEST1/2),(2*i+ CHINT_START_REG_2), Chint_RegData[(CHINT_REQUEST1/2)+i]);
+			
+			if ((millis()-mqtt_interval> MQTT_TIMER)and mqtt_on){
 				handleMqttPublish ();
 				mqtt_interval = millis();
 }}}}
