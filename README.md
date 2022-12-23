@@ -2,9 +2,7 @@
 This project uses ESP32 to translate MODBUS messages of CHINT's DTSU666 Energy Meter into HUAWEI DTSU666H format.
 This project translates the DTSU666 CHINT Power Meter registers addreses to Huawei DTSU666H Power Meter addreses
 
-Project base on the eMODBUS librrary  https://emodbus.github.io/ in this librrary i made two small changes :
-in the ModbusServerRTU.cpp added "delay(60)"  	row 192
-in the RTUutils.cpp	added "delay(70)"    // row 223;  
+Project base on the eMODBUS librrary  https://emodbus.github.io/ 
 
 Information on how to prepare enviroment , compile and flash ESP32 modules can be found at
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#
