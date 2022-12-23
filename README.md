@@ -19,7 +19,7 @@ idf.py set-target esp32
 
 idf.py menuconfig     // not nessesery if you want to use configuration prepared by me
 
-idf.py -p com8 flash monitor     // change number COM port depending your configuration
+idf.py -p com8 build flash monitor     // change number COM port depending your configuration
 
 After this commands build directory will be created  and the ESP32 module flashed .
 
