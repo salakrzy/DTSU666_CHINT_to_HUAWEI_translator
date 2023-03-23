@@ -12,7 +12,14 @@ https://docs.espressif.com/projects/arduino-esp32/en/latest/esp-idf_component.ht
 
 Description how to assembling the hardware you will found in the /doc project directory . 
 
-Project was modyfied to use Platformio
+After instalation Espressif ESP-IDF enviroment for ESP32 , you can execute commands to compiling and flash this project. Go to the directory where you copied project files and execute this commands
 
+idf.py set-target esp32
+
+idf.py menuconfig // not nessesery if you want to use configuration prepared by me
+
+idf.py -p com8 build flash monitor // change number COM port depending your configuration
+
+After this commands build directory will be created and the ESP32 module flashed .
 
 Good Luck:-)
