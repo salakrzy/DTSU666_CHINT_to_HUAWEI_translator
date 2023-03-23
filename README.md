@@ -1,30 +1,30 @@
 # DTSU666_CHINT_to_HUAWEI_translator
-This project uses ESP32 to translate MODBUS messages of CHINT's DTSU666 Energy Meter into HUAWEI DTSU666H format.
+Project was modyfied to use on Platformio with new eModbus librrary version. 
+
+This project uses ESP32 to translate MODBUS messages from CHINT's DTSU666 Energy Meter into HUAWEI DTSU666H format.
 This project translates the DTSU666 CHINT Power Meter registers addreses to Huawei DTSU666H Power Meter addreses.
 
-All data received from CHINT counter could be send to MQTT Broker.
+All received data could be send  parallel over WiFi to MQTT server .
 
-Project base on the eMODBUS librrary  https://github.com/eModbus/eModbus 
+Project base on the eMODBUS librrary  https://github.com/eModbus/eModbus and native for platformio ESP32 libraries
 
-Information on how to prepare enviroment , compile and flash ESP32 modules can be found at
-https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#
+Description how to assembling the hardware you will found in the /doc project directory . In used RS485 interface the R5 and R6 resistors are 20k ohm it is to much for MOdbus standard, if you have transmission errors, change this resistors to 2k ohm.
+If you change the R5 and R6 resistors,  you don' need remowe the R7 120 ohm resistor.
 
-Project uses the Arduino.h librrary. How to instal this librrary in espressif enviroment,  you can read at
-https://docs.espressif.com/projects/arduino-esp32/en/latest/esp-idf_component.html
+You should change your private credentials at this place in main.cpp file
 
-Description how to assembling the hardware you will found in the /doc project directory . 
+const char* ssid = "wifi username";
 
-After instalation Espressif ESP-IDF enviroment for ESP32 , you can execute commands to compiling and flash this project. Go to the directory where you copied project files and execute this commands
+const char* password = "wifi password";
 
-idf.py set-target esp32
+const char* mqttServer = "mqtt server";
 
-idf.py menuconfig // not nessesery if you want to use configuration prepared by me.
+const int mqttPort = 1883;
 
-idf.py -p com8 build flash monitor // change number COM port depending your configuration.
+const char* mqttUser = "mqtt username";
 
-After this commands build directory will be created and the ESP32 module flashed .
+const char* mqttPassword = "mqtt password";
 
-In used RS485 interface the R5 and R6 resistors are 20k ohm it is to much for MOdbus standard, if you have transmission errors, change this resistors to 2k ohm.
-If you change the R5 and R6 resistors,  you don't need remove the R7 120 ohm resistor.
+
 
 Good Luck:-)
