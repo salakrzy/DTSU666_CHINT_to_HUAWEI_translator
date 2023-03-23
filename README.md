@@ -24,7 +24,7 @@ idf.py -p com8 build flash monitor // change number COM port depending your conf
 
 After this commands build directory will be created and the ESP32 module flashed .
 
-In used RS485 interface the R5 and R6 resistors are 20k ohm it is to much for MOdbus standard, if you havetransmission errors, change this resistors to 2k ohm.
-If you change the R5 and R6 resistors,  you don' need remowe the R7 120 ohm resistor.
+In used RS485 interface the R5 and R6 resistors are 20k ohm it is to much for MOdbus standard, if you have transmission errors, change this resistors to 2k ohm.
+If you change the R5 and R6 resistors,  you don't need remove the R7 120 ohm resistor.
 
 Good Luck:-)
