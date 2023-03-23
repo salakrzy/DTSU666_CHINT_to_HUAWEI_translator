@@ -1,8 +1,10 @@
 # DTSU666_CHINT_to_HUAWEI_translator
 This project uses ESP32 to translate MODBUS messages of CHINT's DTSU666 Energy Meter into HUAWEI DTSU666H format.
-This project translates the DTSU666 CHINT Power Meter registers addreses to Huawei DTSU666H Power Meter addreses
+This project translates the DTSU666 CHINT Power Meter registers addreses to Huawei DTSU666H Power Meter addreses.
 
-Project base on the eMODBUS librrary  https://emodbus.github.io/ 
+All data received from CHINT counter could be send to MQTT Broker.
+
+Project base on the eMODBUS librrary  https://github.com/eModbus/eModbus 
 
 Information on how to prepare enviroment , compile and flash ESP32 modules can be found at
 https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#
@@ -16,9 +18,9 @@ After instalation Espressif ESP-IDF enviroment for ESP32 , you can execute comma
 
 idf.py set-target esp32
 
-idf.py menuconfig // not nessesery if you want to use configuration prepared by me
+idf.py menuconfig // not nessesery if you want to use configuration prepared by me.
 
-idf.py -p com8 build flash monitor // change number COM port depending your configuration
+idf.py -p com8 build flash monitor // change number COM port depending your configuration.
 
 After this commands build directory will be created and the ESP32 module flashed .
 
