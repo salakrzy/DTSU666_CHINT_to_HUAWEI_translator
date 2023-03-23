@@ -202,7 +202,7 @@ void handleData1(ModbusMessage response, uint32_t token) {
 		break;
 	  }
 //	Serial.printf(" words= int %i  HEX %x: \n",numb_bytes, words);
-	for (uint8_t i = 0; i < words/2; i++) {
+	for (uint8_t i = 0; i < words/4; i++) {
 	offs = response.get(offs, Chint_RegData[Chint_RegData_ofset]);
 //	Serial.print(Chint_RegData[Chint_RegData_ofset], HEX);
 //	Serial.printf(" %i ", i);
@@ -283,7 +283,7 @@ void handleMqttPublish (){
 		sendMessage("Power", "qc_kVar", Chint_RegData[16]);
 		sendMessage("PowerFactor", "", Chint_RegData[21]);
 		sendMessage("Frequency", "", Chint_RegData[34]);
-		sendMessage("EnergyDemand", "", Chint_RegData[40]);
+		sendMessage("EnergyDemand", "", Chint_RegData[36]);
 		sendMessage("Energy", "Import", Chint_RegData[41]);
 		sendMessage("Energy", "Export", Chint_RegData[46]);
 //		sendMessage("", "", Chint_RegData[]);
