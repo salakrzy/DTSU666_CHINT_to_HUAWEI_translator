@@ -90,9 +90,9 @@ int HuaweiTranslate[CHINT_REQUEST1/2+CHINT_REQUEST2/2]=
 21,22,23,24,	// Power Factor pft, pfa, pfb, pfc  24, 25,26,27
 36, 			// Total Active Electricity    28
 37,38,39,		// Active Electricity  a b c  29 30 31 
-46,				// Total Positive Active Electricity   32
+41,				// Total Positive Active Electricity 32 
 33,34,35,		// 33 34 35
-41,				// Total negative Active electricity  36
+46,				// Total negative Active electricity 36 
 37,38,39, 		// 37 38 39  
 40,				// 40  END Lower Chints registers
 41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70
